@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Կենդանակերպի և Նյումերոլոգիայի Հաշվիչ</title>
+<meta name="description" content="Մուտքագրեք ձեր ծննդյան ամսաթիվը՝ գտնելու ձեր կենդանակերպի նշանը և հաշվելու ձեր կյանքի թիվը։">
+<meta name="theme-color" content="#0B0E1F">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230B0E1F'/%3E%3Ctext x='12' y='17' font-size='14' text-anchor='middle' fill='%23E3C077'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Armenian:wght@400;500;600;700&family=Noto+Sans+Armenian:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --bg:#0B0E1F;
+  --bg-alt:#10132A;
+  --surface:#171B34;
+  --surface-2:#1D2240;
+  --border:rgba(201,162,75,0.20);
+  --border-soft:rgba(166,171,201,0.14);
+
+  --text-primary:#EDEAE0;
+  --text-secondary:#A6ABC9;
+  --text-muted:#7C82A8;
+
+  --gold:#C9A24B;
+  --gold-bright:#E3C077;
+  --gold-dim:rgba(201,162,75,0.12);
+
+  --teal:#4E9C90;
+  --teal-bright:#71C0B3;
+  --teal-dim:rgba(78,156,144,0.14);
+
+  --coral:#E2867B;
+
+  --font-display:'Noto Serif Armenian', serif;
+  --font-body:'Noto Sans Armenian', sans-serif;
+  --font-mono:'JetBrains Mono', monospace;
+
+  --space-1:8px;
+  --space-2:16px;
+  --space-3:24px;
+  --space-4:32px;
+  --space-5:48px;
+  --space-6:64px;
+  --space-7:96px;
+
+  --radius-s:8px;
+  --radius-m:14px;
+  --radius-l:24px;
+
+  --max-w:1180px;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+body{margin:0;background:var(--bg);color:var(--text-primary);font-family:var(--font-body);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4,p,figure{margin:0;}
+ul{margin:0;padding:0;list-style:none;}
+img,svg{display:block;max-width:100%;}
+a{color:inherit;text-decoration:none;}
+button,input{font-family:inherit;font-size:inherit;color:inherit;}
+button{cursor:pointer;}
+input{background:none;border:none;}
+
+::selection{background:var(--gold);color:var(--bg);}
+:focus-visible{outline:2px solid var(--gold-bright);outline-offset:3px;border-radius:4px;}
+
+.skip-link{
+  position:fixed;top:-60px;left:16px;z-index:100;
+  background:var(--gold);color:#171105;
+  padding:12px 20px;border-radius:var(--radius-s);
+  font-weight:600;font-size:0.9rem;
+  transition:top 0.2s var(--ease);
+}
+.skip-link:focus{top:16px;}
+
+/* ============================================================
+   AMBIENT STARFIELD (fixed, CSS-only)
+   ============================================================ */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20px 30px, rgba(237,234,224,0.55), transparent),
+    radial-gradient(1px 1px at 90px 120px, rgba(237,234,224,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 160px 60px, rgba(201,162,75,0.5), transparent),
+    radial-gradient(1px 1px at 210px 170px, rgba(237,234,224,0.35), transparent),
+    radial-gradient(1.5px 1.5px at 260px 40px, rgba(237,234,224,0.5), transparent),
+    radial-gradient(1px 1px at 40px 190px, rgba(166,171,201,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 320px 130px, rgba(237,234,224,0.4), transparent);
+  background-repeat:repeat;
+  background-size:340px 220px;
+  opacity:0.8;
+  animation:twinkle 9s ease-in-out infinite;
+}
+@keyframes twinkle{
+  0%,100%{opacity:0.55;}
+  50%{opacity:0.95;}
+}
+
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
+.wrap{position:relative;z-index:1;}
+.container{max-width:var(--max-w);margin-inline:auto;padding-inline:var(--space-3);}
+section{position:relative;padding-block:var(--space-6);}
+@media(min-width:900px){
+  section{padding-block:var(--space-7);}
+  .container{padding-inline:var(--space-4);}
+}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:var(--space-1);
+  font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.18em;
+  text-transform:uppercase;color:var(--gold);
+  margin-bottom:var(--space-2);
+}
+.eyebrow.is-teal{color:var(--teal-bright);}
+.eyebrow::before{content:"";width:20px;height:1px;background:currentColor;display:inline-block;}
+
+h2.section-title{
+  font-family:var(--font-display);font-weight:600;
+  font-size:clamp(1.8rem,4vw,2.6rem);
+  line-height:1.15;letter-spacing:-0.01em;
+  margin-bottom:var(--space-2);
+}
+p.section-lead{
+  color:var(--text-secondary);
+  font-size:clamp(1rem,1.4vw,1.15rem);
+  max-width:62ch;
+  line-height:1.75;
+}
+
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);border:none;margin:0;}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+.site-nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(11,14,31,0.78);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-soft);
+}
+.site-nav .container{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:var(--space-3);
+  padding-block:var(--space-2);
+}
+.brand{
+  font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
+}
+.brand .mark{color:var(--gold-bright);font-size:1rem;}
+.nav-links{
+  display:flex;gap:var(--space-1);overflow-x:auto;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.nav-links::-webkit-scrollbar{display:none;}
+.nav-links a{
+  font-size:0.85rem;color:var(--text-secondary);white-space:nowrap;
+  padding:10px 14px;border-radius:999px;min-height:44px;
+  display:flex;align-items:center;
+  transition:background 0.2s var(--ease),color 0.2s var(--ease);
+}
+.nav-links a:hover{background:var(--surface);color:var(--text-primary);}
+.nav-links a[aria-current="location"]{background:var(--gold-dim);color:var(--gold-bright);}
+
+/* ============================================================
+   COMPACT PAGE INTRO
+   ============================================================ */
+.hero-compact{padding-top:var(--space-6);padding-bottom:var(--space-4);text-align:center;}
+.hero-compact .container{max-width:700px;}
+.hero-compact .eyebrow{justify-content:center;}
+.hero-compact h1{
+  font-family:var(--font-display);font-weight:700;
+  font-size:clamp(2rem,5vw,3rem);line-height:1.1;
+  letter-spacing:-0.015em;margin-bottom:var(--space-2);
+}
+.hero-compact h1 em{font-style:normal;color:var(--gold-bright);}
+.hero-compact p{color:var(--text-secondary);font-size:clamp(1rem,1.4vw,1.15rem);line-height:1.75;margin-inline:auto;}
+.hero-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-2);margin-top:var(--space-3);}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 26px;border-radius:999px;
+  font-size:0.95rem;font-weight:600;min-height:48px;
+  transition:transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+  border:1px solid transparent;
+}
+.btn-gold{background:var(--gold);color:#171105;}
+.btn-gold:hover{background:var(--gold-bright);box-shadow:0 8px 24px -8px rgba(201,162,75,0.55);transform:translateY(-1px);}
+.btn-teal{background:var(--teal);color:#08201C;}
+.btn-teal:hover{background:var(--teal-bright);box-shadow:0 8px 24px -8px rgba(78,156,144,0.55);transform:translateY(-1px);}
+.btn-outline{background:transparent;border-color:var(--border-soft);color:var(--text-primary);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold-bright);}
+
+/* ============================================================
+   TOOL CARD (shared: zodiac finder + life number calculator)
+   ============================================================ */
+.tool-card{
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-l);
+  padding:var(--space-4);
+}
+@media(min-width:640px){.tool-card{padding:var(--space-5);}}
+.tool-card.is-gold{border-color:var(--border);}
+.tool-card.is-teal{border-color:rgba(78,156,144,0.28);}
+
+.tool-form{
+  display:flex;flex-direction:column;gap:var(--space-2);
+}
+@media(min-width:560px){
+  .tool-form{flex-direction:row;align-items:flex-end;flex-wrap:wrap;}
+}
+.field{display:flex;flex-direction:column;gap:6px;flex:1 1 220px;}
+.field label{font-size:0.85rem;color:var(--text-secondary);}
+.field input[type="date"]{
+  background:var(--bg-alt);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-s);
+  padding:12px 14px;min-height:48px;
+  color:var(--text-primary);font-family:var(--font-mono);font-size:0.95rem;
+  transition:border-color 0.2s var(--ease);
+  color-scheme:dark;
+}
+.field input[type="date"]:focus-visible{border-color:var(--gold);}
+.tool-card.is-teal .field input[type="date"]:focus-visible{border-color:var(--teal);}
+
+.form-feedback{
+  min-height:24px;margin-top:var(--space-2);
+  font-size:0.95rem;color:var(--text-primary);
+}
+.form-feedback.has-error{color:var(--coral);}
+.form-feedback strong{color:var(--gold-bright);}
+.tool-card.is-teal .form-feedback strong{color:var(--teal-bright);}
+
+.steps-panel{margin-top:var(--space-2);display:flex;flex-direction:column;gap:6px;}
+.step{
+  display:flex;justify-content:space-between;gap:var(--space-2);
+  padding:10px 14px;border-radius:var(--radius-s);
+  background:var(--bg-alt);border:1px solid var(--border-soft);
+  font-family:var(--font-mono);font-size:0.85rem;
+}
+.step-label{color:var(--text-muted);}
+.step-value{color:var(--text-primary);}
+
+/* ============================================================
+   ZODIAC GRID
+   ============================================================ */
+.zodiac-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);
+  margin-top:var(--space-5);
+}
+@media(min-width:640px){.zodiac-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:960px){.zodiac-grid{grid-template-columns:repeat(4,1fr);}}
+
+.sign-card{
+  background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:var(--radius-m);padding:var(--space-3);
+  transition:border-color 0.25s var(--ease), transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.sign-card.is-match{
+  border-color:var(--gold);
+  box-shadow:0 0 0 1px var(--gold), 0 12px 30px -12px rgba(201,162,75,0.45);
+  transform:translateY(-2px);
+}
+.sign-symbol{font-size:1.8rem;color:var(--gold-bright);margin-bottom:10px;}
+.sign-name{font-family:var(--font-display);font-weight:600;font-size:1.05rem;margin-bottom:2px;}
+.sign-range{font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;}
+.sign-meta{display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;}
+.sign-meta svg{width:10px;height:10px;flex-shrink:0;}
+.sign-traits{font-size:0.82rem;color:var(--text-secondary);line-height:1.5;}
+
+.sign-card summary{cursor:pointer;list-style:none;display:block;}
+.sign-card summary::-webkit-details-marker{display:none;}
+.sign-more-toggle{
+  display:flex;align-items:center;gap:6px;margin-top:12px;
+  font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.06em;
+  color:var(--gold);min-height:32px;
+}
+.sign-more-toggle svg{width:12px;height:12px;transition:transform 0.2s var(--ease);}
+.sign-card[open] .sign-more-toggle svg{transform:rotate(180deg);}
+.sign-more{
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);
+  display:flex;flex-direction:column;gap:6px;
+  font-size:0.8rem;color:var(--text-secondary);
+}
+.sign-more b{color:var(--text-primary);font-weight:600;}
+
+/* ============================================================
+   NUMBERS MEANING GRID
+   ============================================================ */
+.numbers-grid{
+  display:grid;grid-template-columns:1fr;gap:var(--space-2);
+  margin-top:var(--space-5);
+}
+@media(min-width:640px){.numbers-grid{grid-template-columns:repeat(3,1fr);}}
+.number-card{
+  background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:var(--radius-m);padding:var(--space-3);
+  display:flex;gap:var(--space-2);align-items:flex-start;
+  transition:border-color 0.25s var(--ease), transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.number-card.is-match{
+  border-color:var(--teal);
+  box-shadow:0 0 0 1px var(--teal), 0 12px 30px -12px rgba(78,156,144,0.5);
+  transform:translateY(-2px);
+}
+.number-digit{
+  font-family:var(--font-mono);font-weight:600;font-size:1.6rem;color:var(--teal-bright);
+  width:42px;flex-shrink:0;line-height:1;
+}
+.number-title{font-family:var(--font-display);font-weight:600;font-size:1.02rem;margin-bottom:4px;}
+.number-desc{font-size:0.85rem;color:var(--text-secondary);line-height:1.5;}
+
+.number-card.is-master{border-color:rgba(201,162,75,0.28);}
+.number-card.is-master .number-digit{color:var(--gold-bright);width:auto;min-width:42px;}
+.master-badge{
+  display:inline-block;font-family:var(--font-mono);font-size:0.65rem;letter-spacing:0.08em;
+  color:var(--gold);background:var(--gold-dim);border-radius:999px;
+  padding:2px 8px;margin-bottom:4px;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{
+  padding-block:var(--space-5);border-top:1px solid var(--border-soft);
+}
+footer .container{
+  display:flex;flex-direction:column;gap:var(--space-2);
+}
+@media(min-width:640px){
+  footer .container{flex-direction:row;justify-content:space-between;align-items:center;}
+}
+.footer-note{color:var(--text-muted);font-size:0.85rem;max-width:56ch;line-height:1.6;}
+.footer-brand{font-family:var(--font-display);color:var(--text-secondary);font-size:0.95rem;}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media(prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Անցնել հիմնական բովանդակությանը</a>
+
+<div class="wrap">
+
+  <header class="site-nav">
+    <div class="container">
+      <a class="brand" href="#top"><span class="mark">✦</span>Աստղեր ու Թվեր</a>
+      <nav class="nav-links" aria-label="Հիմնական բաժիններ">
+        <a href="#zodiac">Կենդանակերպ</a>
+        <a href="#numerology">Նյումերոլոգիա</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+
+    <!-- ============ COMPACT INTRO ============ -->
+    <section class="hero-compact" id="top">
+      <div class="container">
+        <p class="eyebrow">Ինքնաճանաչման հաշվիչ</p>
+        <h1>Գտեք ձեր <em>նշանը</em> և ձեր <em>թիվը</em></h1>
+        <p>Մուտքագրեք ձեր ծննդյան ամսաթիվը՝ ստանալու ձեր կենդանակերպի նշանը և ձեր կյանքի թիվը՝ նյումերոլոգիայի հաշվարկով։</p>
+        <div class="hero-actions">
+          <a class="btn btn-gold" href="#zodiac">Գտնել իմ նշանը</a>
+          <a class="btn btn-teal" href="#numerology">Հաշվել կյանքի թիվը</a>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ============ ZODIAC ============ -->
+    <section id="zodiac">
+      <div class="container">
+        <p class="eyebrow">Կենդանակերպի 12 նշանները</p>
+        <h2 class="section-title">Գտեք ձեր նշանը</h2>
+        <p class="section-lead">Մուտքագրեք ձեր ծննդյան ամսաթիվը՝ ձեր կենդանակերպի նշանը գտնելու համար։</p>
+
+        <div class="tool-card is-gold" style="margin-top:var(--space-4);">
+          <form class="tool-form" id="zodiac-form">
+            <div class="field">
+              <label for="zodiac-date">Ձեր ծննդյան ամսաթիվը</label>
+              <input type="date" id="zodiac-date" name="zodiac-date" required>
+            </div>
+            <button type="submit" class="btn btn-gold">Բացահայտել նշանը</button>
+          </form>
+          <p class="form-feedback" id="zodiac-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="zodiac-grid">
+          <details class="sign-card" id="sign-aries">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♈</div>
+            <h3 class="sign-name">Խոյ</h3>
+            <p class="sign-range">Մարտ 21 – Ապրիլ 19</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,0 10,10 0,10" fill="var(--gold)"/></svg>Կրակ</p>
+            <p class="sign-traits">Եռանդուն, համարձակ, առաջատար</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Մարս</p>
+              <p><b>Համատեղելի է՝</b> Առյուծի և Աղեղնավորի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-taurus">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♉</div>
+            <h3 class="sign-name">Ցուլ</h3>
+            <p class="sign-range">Ապրիլ 20 – Մայիս 20</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="0,0 10,0 5,10" fill="var(--gold)"/></svg>Հող</p>
+            <p class="sign-traits">Կայուն, համբերատար, զգայական</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Վեներա</p>
+              <p><b>Համատեղելի է՝</b> Կույսի և Այծեղջյուրի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-gemini">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♊</div>
+            <h3 class="sign-name">Երկվորյակներ</h3>
+            <p class="sign-range">Մայիս 21 – Հունիս 20</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,0 10,10 0,10" fill="var(--gold)" fill-opacity="0.5"/><line x1="1" y1="7" x2="9" y2="7" stroke="var(--gold)" stroke-width="1"/></svg>Օդ</p>
+            <p class="sign-traits">Հաղորդակցվող, հետաքրքրասեր, ճկուն</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Մերկուրի</p>
+              <p><b>Համատեղելի է՝</b> Կշեռքի և Ջրհոսի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-cancer">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♋</div>
+            <h3 class="sign-name">Խեցգետին</h3>
+            <p class="sign-range">Հունիս 21 – Հուլիս 22</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="0,0 10,0 5,10" fill="var(--gold)" fill-opacity="0.5"/><line x1="1" y1="3" x2="9" y2="3" stroke="var(--gold)" stroke-width="1"/></svg>Ջուր</p>
+            <p class="sign-traits">Խնամող, զգայուն, ընտանասեր</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Լուսին</p>
+              <p><b>Համատեղելի է՝</b> Կարիճի և Ձկների հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-leo">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♌</div>
+            <h3 class="sign-name">Առյուծ</h3>
+            <p class="sign-range">Հուլիս 23 – Օգոստոս 22</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,0 10,10 0,10" fill="var(--gold)"/></svg>Կրակ</p>
+            <p class="sign-traits">Վստահ, առատաձեռն, դրամատիկ</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Արև</p>
+              <p><b>Համատեղելի է՝</b> Խոյի և Աղեղնավորի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-virgo">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♍</div>
+            <h3 class="sign-name">Կույս</h3>
+            <p class="sign-range">Օգոստոս 23 – Սեպտեմբեր 22</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="0,0 10,0 5,10" fill="var(--gold)"/></svg>Հող</p>
+            <p class="sign-traits">Մանրակրկիտ, գործնական, վերլուծական</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Մերկուրի</p>
+              <p><b>Համատեղելի է՝</b> Ցուլի և Այծեղջյուրի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-libra">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♎</div>
+            <h3 class="sign-name">Կշեռք</h3>
+            <p class="sign-range">Սեպտեմբեր 23 – Հոկտեմբեր 22</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,0 10,10 0,10" fill="var(--gold)" fill-opacity="0.5"/><line x1="1" y1="7" x2="9" y2="7" stroke="var(--gold)" stroke-width="1"/></svg>Օդ</p>
+            <p class="sign-traits">Հավասարակշռված, դիվանագետ, էսթետ</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Վեներա</p>
+              <p><b>Համատեղելի է՝</b> Երկվորյակների և Ջրհոսի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-scorpio">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♏</div>
+            <h3 class="sign-name">Կարիճ</h3>
+            <p class="sign-range">Հոկտեմբեր 23 – Նոյեմբեր 21</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="0,0 10,0 5,10" fill="var(--gold)" fill-opacity="0.5"/><line x1="1" y1="3" x2="9" y2="3" stroke="var(--gold)" stroke-width="1"/></svg>Ջուր</p>
+            <p class="sign-traits">Կրքոտ, խորհրդավոր, վճռական</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Պլուտոն</p>
+              <p><b>Համատեղելի է՝</b> Խեցգետնի և Ձկների հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-sagittarius">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♐</div>
+            <h3 class="sign-name">Աղեղնավոր</h3>
+            <p class="sign-range">Նոյեմբեր 22 – Դեկտեմբեր 21</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,0 10,10 0,10" fill="var(--gold)"/></svg>Կրակ</p>
+            <p class="sign-traits">Արկածասեր, լավատես, ազատասեր</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Յուպիտեր</p>
+              <p><b>Համատեղելի է՝</b> Խոյի և Առյուծի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-capricorn">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♑</div>
+            <h3 class="sign-name">Այծեղջյուր</h3>
+            <p class="sign-range">Դեկտեմբեր 22 – Հունվար 19</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="0,0 10,0 5,10" fill="var(--gold)"/></svg>Հող</p>
+            <p class="sign-traits">Նպատակասլաց, կարգապահ, պատասխանատու</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Սատուրն</p>
+              <p><b>Համատեղելի է՝</b> Ցուլի և Կույսի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-aquarius">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♒</div>
+            <h3 class="sign-name">Ջրհոս</h3>
+            <p class="sign-range">Հունվար 20 – Փետրվար 18</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,0 10,10 0,10" fill="var(--gold)" fill-opacity="0.5"/><line x1="1" y1="7" x2="9" y2="7" stroke="var(--gold)" stroke-width="1"/></svg>Օդ</p>
+            <p class="sign-traits">Նորարար, անկախ, մարդասեր</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Ուրան</p>
+              <p><b>Համատեղելի է՝</b> Երկվորյակների և Կշեռքի հետ</p>
+            </div>
+          </details>
+          <details class="sign-card" id="sign-pisces">
+            <summary>
+            <div class="sign-symbol" aria-hidden="true">♓</div>
+            <h3 class="sign-name">Ձկներ</h3>
+            <p class="sign-range">Փետրվար 19 – Մարտ 20</p>
+            <p class="sign-meta"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="0,0 10,0 5,10" fill="var(--gold)" fill-opacity="0.5"/><line x1="1" y1="3" x2="9" y2="3" stroke="var(--gold)" stroke-width="1"/></svg>Ջուր</p>
+            <p class="sign-traits">Երևակայող, կարեկցող, ինտուիտիվ</p>
+              <span class="sign-more-toggle">Ավելին<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+            </summary>
+            <div class="sign-more">
+              <p><b>Տիրակալ մոլորակ՝</b> Նեպտուն</p>
+              <p><b>Համատեղելի է՝</b> Խեցգետնի և Կարիճի հետ</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ============ NUMEROLOGY / LIFE NUMBER CALCULATOR ============ -->
+    <section id="numerology" style="background:var(--bg-alt);">
+      <div class="container">
+        <p class="eyebrow is-teal">Ինչպե՞ս հաշվարկել կյանքի թիվը</p>
+        <h2 class="section-title">Հաշվեք ձեր կյանքի թիվը</h2>
+        <p class="section-lead">Կյանքի թիվը որոշելու համար գումարվում են ձեր ծննդյան ամսաթվի բոլոր թվանշանները, մինչև ստացվի մեկնիշային թիվ (1-ից 9)։ Օրինակ՝ 25.12.2009 → 2+5+1+2+2+0+0+9 = 21 → 2+1 = 3։ Բացառություն են կազմում 11, 22 և 33 «վարպետի թվերը». եթե հանրագումարը հասնում է դրանցից մեկին, հաշվարկը կանգ է առնում այնտեղ և ավելի չի կրճատվում։</p>
+
+        <div class="tool-card is-teal" style="margin-top:var(--space-4);">
+          <form class="tool-form" id="life-form">
+            <div class="field">
+              <label for="life-date">Ձեր ծննդյան ամսաթիվը</label>
+              <input type="date" id="life-date" name="life-date" required>
+            </div>
+            <button type="submit" class="btn btn-teal">Հաշվել թիվը</button>
+          </form>
+          <p class="form-feedback" id="life-result" role="status" aria-live="polite"></p>
+          <div class="steps-panel" id="life-steps"></div>
+        </div>
+
+        <div class="numbers-grid">
+          <article class="number-card" id="num-1">
+            <div class="number-digit">1</div>
+            <div><h3 class="number-title">Առաջնորդություն</h3><p class="number-desc">Ինքնուրույնություն, նախաձեռնողականություն</p></div>
+          </article>
+          <article class="number-card" id="num-2">
+            <div class="number-digit">2</div>
+            <div><h3 class="number-title">Համագործակցություն</h3><p class="number-desc">Զգայունություն, դիվանագիտություն</p></div>
+          </article>
+          <article class="number-card" id="num-3">
+            <div class="number-digit">3</div>
+            <div><h3 class="number-title">Ստեղծագործականություն</h3><p class="number-desc">Շփվողություն, արտահայտչականություն</p></div>
+          </article>
+          <article class="number-card" id="num-4">
+            <div class="number-digit">4</div>
+            <div><h3 class="number-title">Կարգապահություն</h3><p class="number-desc">Աշխատասիրություն, հուսալիություն</p></div>
+          </article>
+          <article class="number-card" id="num-5">
+            <div class="number-digit">5</div>
+            <div><h3 class="number-title">Ազատասիրություն</h3><p class="number-desc">Հետաքրքրասիրություն, փոփոխություններ</p></div>
+          </article>
+          <article class="number-card" id="num-6">
+            <div class="number-digit">6</div>
+            <div><h3 class="number-title">Հոգատարություն</h3><p class="number-desc">Պատասխանատվություն, ընտանեկան արժեքներ</p></div>
+          </article>
+          <article class="number-card" id="num-7">
+            <div class="number-digit">7</div>
+            <div><h3 class="number-title">Վերլուծական միտք</h3><p class="number-desc">Իմաստություն, խորը մտածողություն</p></div>
+          </article>
+          <article class="number-card" id="num-8">
+            <div class="number-digit">8</div>
+            <div><h3 class="number-title">Նպատակասլացություն</h3><p class="number-desc">Հաջողություն, նյութական ձեռքբերումներ</p></div>
+          </article>
+          <article class="number-card" id="num-9">
+            <div class="number-digit">9</div>
+            <div><h3 class="number-title">Մարդասիրություն</h3><p class="number-desc">Առատաձեռնություն, հոգևոր զարգացում</p></div>
+          </article>
+          <article class="number-card is-master" id="num-11">
+            <div class="number-digit">11</div>
+            <div><span class="master-badge">Վարպետի թիվ</span><h3 class="number-title">Ինտուիցիա</h3><p class="number-desc">Հոգևոր խորաթափանցություն, ներշնչանք, ուժեղացված 2</p></div>
+          </article>
+          <article class="number-card is-master" id="num-22">
+            <div class="number-digit">22</div>
+            <div><span class="master-badge">Վարպետի թիվ</span><h3 class="number-title">Կառուցող</h3><p class="number-desc">Մեծ գաղափարներն իրականության վերածելու ունակություն, ուժեղացված 4</p></div>
+          </article>
+          <article class="number-card is-master" id="num-33">
+            <div class="number-digit">33</div>
+            <div><span class="master-badge">Վարպետի թիվ</span><h3 class="number-title">Ուսուցիչ</h3><p class="number-desc">Կարեկցանք և հոգատարություն լայն մասշտաբով, ուժեղացված 6</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p class="footer-brand"><span class="mark" style="color:var(--gold-bright);">✦</span> Աստղեր ու Թվեր</p>
+      <p class="footer-note">Այս էջի պարունակությունը կիրառվում է ժամանցի և ինքնաճանաչման նպատակներով միայն և գիտականորեն հաստատված չէ։</p>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------------- ZODIAC ---------------- */
+  var ZODIAC = [
+    {slug:'aries', symbol:'♈', name:'Խոյ', range:'Մարտ 21 – Ապրիլ 19', sMonth:3,sDay:21,eMonth:4,eDay:19},
+    {slug:'taurus', symbol:'♉', name:'Ցուլ', range:'Ապրիլ 20 – Մայիս 20', sMonth:4,sDay:20,eMonth:5,eDay:20},
+    {slug:'gemini', symbol:'♊', name:'Երկվորյակներ', range:'Մայիս 21 – Հունիս 20', sMonth:5,sDay:21,eMonth:6,eDay:20},
+    {slug:'cancer', symbol:'♋', name:'Խեցգետին', range:'Հունիս 21 – Հուլիս 22', sMonth:6,sDay:21,eMonth:7,eDay:22},
+    {slug:'leo', symbol:'♌', name:'Առյուծ', range:'Հուլիս 23 – Օգոստոս 22', sMonth:7,sDay:23,eMonth:8,eDay:22},
+    {slug:'virgo', symbol:'♍', name:'Կույս', range:'Օգոստոս 23 – Սեպտեմբեր 22', sMonth:8,sDay:23,eMonth:9,eDay:22},
+    {slug:'libra', symbol:'♎', name:'Կշեռք', range:'Սեպտեմբեր 23 – Հոկտեմբեր 22', sMonth:9,sDay:23,eMonth:10,eDay:22},
+    {slug:'scorpio', symbol:'♏', name:'Կարիճ', range:'Հոկտեմբեր 23 – Նոյեմբեր 21', sMonth:10,sDay:23,eMonth:11,eDay:21},
+    {slug:'sagittarius', symbol:'♐', name:'Աղեղնավոր', range:'Նոյեմբեր 22 – Դեկտեմբեր 21', sMonth:11,sDay:22,eMonth:12,eDay:21},
+    {slug:'capricorn', symbol:'♑', name:'Այծեղջյուր', range:'Դեկտեմբեր 22 – Հունվար 19', sMonth:12,sDay:22,eMonth:1,eDay:19},
+    {slug:'aquarius', symbol:'♒', name:'Ջրհոս', range:'Հունվար 20 – Փետրվար 18', sMonth:1,sDay:20,eMonth:2,eDay:18},
+    {slug:'pisces', symbol:'♓', name:'Ձկներ', range:'Փետրվար 19 – Մարտ 20', sMonth:2,sDay:19,eMonth:3,eDay:20}
+  ];
+
+  function findZodiac(month, day){
+    var val = month*100+day;
+    for (var i=0;i<ZODIAC.length;i++){
+      var z = ZODIAC[i];
+      var sVal = z.sMonth*100+z.sDay;
+      var eVal = z.eMonth*100+z.eDay;
+      if (sVal <= eVal){
+        if (val >= sVal && val <= eVal) return z;
+      } else {
+        if (val >= sVal || val <= eVal) return z;
+      }
+    }
+    return null;
+  }
+
+  var zodiacForm = document.getElementById('zodiac-form');
+  var zodiacInput = document.getElementById('zodiac-date');
+  var zodiacResult = document.getElementById('zodiac-result');
+  var activeZodiacCard = null;
+
+  if (zodiacForm){
+    zodiacForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if (!zodiacInput.value){
+        zodiacResult.textContent = 'Խնդրում ենք ընտրել ձեր ծննդյան ամսաթիվը։';
+        zodiacResult.classList.add('has-error');
+        zodiacResult.setAttribute('role','alert');
+        return;
+      }
+      zodiacResult.classList.remove('has-error');
+      zodiacResult.setAttribute('role','status');
+      var parts = zodiacInput.value.split('-').map(Number);
+      var m = parts[1], d = parts[2];
+      var sign = findZodiac(m, d);
+      if (!sign) return;
+      zodiacResult.innerHTML = 'Ձեր նշանն է՝ <strong>' + sign.symbol + ' ' + sign.name + '</strong> (' + sign.range + ')';
+      if (activeZodiacCard){
+        activeZodiacCard.classList.remove('is-match');
+        activeZodiacCard.open = false;
+      }
+      var card = document.getElementById('sign-' + sign.slug);
+      if (card){
+        card.classList.add('is-match');
+        card.open = true;
+        activeZodiacCard = card;
+        card.scrollIntoView({behavior: prefersReduced ? 'auto' : 'smooth', block:'center'});
+      }
+    });
+  }
+
+  /* ---------------- NUMEROLOGY ---------------- */
+  var NUMBERS = {
+    1:{title:'Առաջնորդություն'}, 2:{title:'Համագործակցություն'}, 3:{title:'Ստեղծագործականություն'},
+    4:{title:'Կարգապահություն'}, 5:{title:'Ազատասիրություն'}, 6:{title:'Հոգատարություն'},
+    7:{title:'Վերլուծական միտք'}, 8:{title:'Նպատակասլացություն'}, 9:{title:'Մարդասիրություն'},
+    11:{title:'Ինտուիցիա (Վարպետի թիվ)'}, 22:{title:'Կառուցող (Վարպետի թիվ)'}, 33:{title:'Ուսուցիչ (Վարպետի թիվ)'}
+  };
+  var MASTER_NUMBERS = [11, 22, 33];
+
+  function reduceSteps(digits){
+    var steps = [];
+    var current = digits.slice();
+    while (current.length > 1){
+      var sum = current.reduce(function(a,b){return a+b;}, 0);
+      steps.push(current.join('+') + ' = ' + sum);
+      if (MASTER_NUMBERS.indexOf(sum) !== -1) {
+        return {steps: steps, result: sum, isMaster: true};
+      }
+      current = String(sum).split('').map(Number);
+    }
+    return {steps: steps, result: current[0], isMaster: false};
+  }
+
+  var lifeForm = document.getElementById('life-form');
+  var lifeInput = document.getElementById('life-date');
+  var lifeStepsEl = document.getElementById('life-steps');
+  var lifeResult = document.getElementById('life-result');
+  var activeNumberCard = null;
+
+  if (lifeForm){
+    lifeForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if (!lifeInput.value){
+        lifeResult.textContent = 'Խնդրում ենք ընտրել ձեր ծննդյան ամսաթիվը։';
+        lifeResult.classList.add('has-error');
+        lifeResult.setAttribute('role','alert');
+        lifeStepsEl.innerHTML = '';
+        return;
+      }
+      lifeResult.classList.remove('has-error');
+      lifeResult.setAttribute('role','status');
+      var p = lifeInput.value.split('-');
+      var y = p[0], m = p[1], d = p[2];
+      var displayDate = d + '.' + m + '.' + y;
+      var digits = (y+m+d).split('').map(Number);
+      var out = reduceSteps(digits);
+
+      var html = '<div class="step"><span class="step-label">Ամսաթիվը</span><span class="step-value">' + displayDate + '</span></div>';
+      out.steps.forEach(function(expr, i){
+        var label = (i === out.steps.length - 1) ? 'Կյանքի թիվը' : (i === 0 ? 'Թվանշանների գումարը' : 'Միջանկյալ գումար');
+        html += '<div class="step"><span class="step-label">' + label + '</span><span class="step-value">' + expr + '</span></div>';
+      });
+      lifeStepsEl.innerHTML = html;
+
+      var info = NUMBERS[out.result];
+      lifeResult.innerHTML = 'Ձեր կյանքի թիվն է՝ <strong>' + out.result + ' — ' + info.title + '</strong>';
+
+      if (activeNumberCard) activeNumberCard.classList.remove('is-match');
+      var card = document.getElementById('num-' + out.result);
+      if (card){
+        card.classList.add('is-match');
+        activeNumberCard = card;
+        card.scrollIntoView({behavior: prefersReduced ? 'auto' : 'smooth', block:'center'});
+      }
+    });
+  }
+
+  /* ---------------- SCROLL-SPY NAV ---------------- */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-links a'));
+  var sections = navLinks
+    .map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); })
+    .filter(Boolean);
+
+  if (sections.length && 'IntersectionObserver' in window){
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var link = navLinks.filter(function(a){ return a.getAttribute('href') === '#' + entry.target.id; })[0];
+        if (!link) return;
+        if (entry.isIntersecting){
+          navLinks.forEach(function(a){ a.removeAttribute('aria-current'); });
+          link.setAttribute('aria-current', 'location');
+        }
+      });
+    }, {rootMargin: '-45% 0px -50% 0px', threshold: 0});
+    sections.forEach(function(s){ observer.observe(s); });
+  }
+})();</script>
+
+</body>
+</html>
